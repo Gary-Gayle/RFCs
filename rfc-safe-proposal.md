@@ -1,4 +1,4 @@
-# Safety & Assurance Findings Exchange (SAFE)
+# Shared AI Findings Exchange (SAFE)
 
 A proposed independent incident-learning and assurance initiative of the Open Secure AI Alliance
 
