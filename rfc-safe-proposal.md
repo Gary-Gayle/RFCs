@@ -28,7 +28,7 @@ SAFE should operate independently so that no vendor or industry segment controls
 
 * **Openness with accountability.** Transparent disclosure processes strengthen collective defense, subject to Coordinated Vulnerability Disclosure (CVD) best practices.
 * **Open learning.** Reviews focus on technical and systemic causes and not intended to address blame.
-* **Proportionality.** Reporting, disclosure and escalation should reflect actual risk.
+* **Risk-based response.** Reporting, disclosure and escalation should reflect actual risk.
 * **Member sovereignty.** SAFE establishes minimum interoperability and assurance practices without superseding members’ internal security policies or legal obligations.
 * **Learning is separate from enforcement.** Confidential review should encourage candid reporting, while regulators and affected parties retain their legal rights.
 
@@ -36,8 +36,7 @@ SAFE should operate independently so that no vendor or industry segment controls
 
 As a condition of membership, members agree to report an incident when they become aware, or reasonably suspect, that an AI system they operate:
 
-* Accesses, exploits or modifies a third-party system without authorization.
-* Obtains credentials, secrets or data without authorization.
+* Accesses, exploits, disrupts, misuses, or modifies a third-party system without authorization.
 * Causes third-party impact by escaping or bypassing a sandbox, network, identity, policy or tool boundary.
 * Accesses third party confidential information, for example, by accessing data, or redistributing for others to access, without consent of the owner. 
 * Continues to probe, access, exploit, or modify a production target after the operator knows or reasonably suspects that the activity is unauthorized or outside the approved scope.
@@ -48,9 +47,9 @@ Intent does not determine whether an event is reportable. Believing that an envi
 
 | Deadline | Required action |
 | -------- | --------------- |
-| **24 hours** | Notify the directly affected organization. |
+| **ASAP** | Notify the directly affected organization. |
 | **72 hours** | Notify customers with credible exposure. |
-| **3 business days** | Submit a confidential SAFE incident report. |
+| **4 business days** | Submit a confidential, initial SAFE incident report. |
 | **14 days** | Issue a broader customer advisory when warranted. |
 | **30 days** | Publish a preliminary factual report, subject to security, legal and investigative constraints. |
 | **90 days** | Publish remediation status. |
@@ -62,7 +61,7 @@ These timelines do not replace any supplier obligation to notify affected partie
 
 Members must preserve and provide affected organizations with the evidence needed for a complete forensic response, including:
 
-* Prompts, traces, tool calls, network logs, configurations, model and safeguard versions and third-party dependencies
+* Prompts, traces, tool calls, logs, configurations, model and safeguard versions and third-party dependencies
 * Agent and workload identities
 * Permissions and credentials available during the run
 * Human approval and intervention events
