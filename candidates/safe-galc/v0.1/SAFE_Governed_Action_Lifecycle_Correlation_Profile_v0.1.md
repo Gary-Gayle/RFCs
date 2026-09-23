@@ -667,18 +667,22 @@ The companion conformance file defines machine-readable skeletons for these mini
 | `GALC-017` | Custody claims acceptance without a referenced result | Structural validation fails; custody MUST NOT pass |
 | `GALC-018` | Two evaluations report the same property | Structural validation fails; overall result MUST NOT be `correlated` |
 
-### 16.1 Scenario construction contract
+### 16.1 Scenario construction and verifier-output boundary
 
-The companion file remains candidate scenario material rather than cryptographic known-answer evidence. A conforming scenario materializer MUST:
+The companion file remains candidate scenario material rather than cryptographic known-answer evidence. Its `base_lifecycle` is a structural fixture envelope: the stored `evaluations` and `overall_result` exist only to exercise full-envelope schema constraints. They are fixture placeholders, are not scenario inputs, and MUST NOT be represented as results produced for a materialized vector.
 
-1. deep-copy `base_lifecycle` for each vector;
+A conforming scenario materializer MUST:
+
+1. deep-copy `base_lifecycle` for each vector as a structural fixture envelope;
 2. apply `semantic_changes` in listed order using only `add`, `remove`, and `replace` operations with JSON Pointer path semantics;
-3. when `recompute_integrity` is `true`, recompute each affected record payload digest using its declared canonicalization and digest algorithm, update every dependent record reference and typed-link endpoint transitively, and regenerate or remove any integrity assertion invalidated by changed bytes;
-4. when `recompute_integrity` is `false`, preserve the deliberately inconsistent digest or link so the verifier can detect it;
-5. treat vector `expected` results as test expectations, never as verifier-produced evidence; and
-6. independently recompute evaluations and `overall_result` using the declared evaluation contract.
+3. use the resulting fixture envelope only for the declared structural schema check, including output-schema negative controls such as `GALC-018`;
+4. project the scenario input by removing `evaluations` and `overall_result` from the changed fixture envelope;
+5. keep the projected scenario input and the vector's `expected` test oracle as separate artifacts;
+6. when `recompute_integrity` is `true`, recompute each affected record payload digest using its declared canonicalization and digest algorithm, update every dependent record reference and typed-link endpoint transitively, and regenerate or remove any integrity assertion invalidated by changed bytes;
+7. when `recompute_integrity` is `false`, preserve the deliberately inconsistent digest or link so the verifier can detect it; and
+8. require a semantic verifier to consume only the projected scenario input, independently compute `evaluations` and `overall_result` under the declared evaluation contract, and compare those produced outputs with `expected`.
 
-Supplied fixture digests remain synthetic placeholders and therefore do not establish cryptographic conformance. A materialized implementation run MUST emit newly computed digests and identify the canonicalization, digest, verifier-method, property-set, and aggregation-rule versions it used.
+The structural harness MAY emit the projected scenario input and expected oracle, but MUST NOT emit inherited fixture outputs as verifier results. Supplied fixture digests and evaluation values remain synthetic placeholders and therefore do not establish cryptographic or semantic conformance. A materialized implementation run MUST emit newly computed digests and independently produced evaluation outputs, and identify the canonicalization, digest, verifier-method, property-set, and aggregation-rule versions it used.
 
 ## 17. Security and abuse considerations
 

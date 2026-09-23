@@ -35,8 +35,14 @@
       "items": {"$ref": "#/$defs/link"}
     },
     "evaluation_contract": {"$ref": "#/$defs/evaluationContract"},
-    "evaluations": {"$ref": "#/$defs/evaluationSet"},
-    "overall_result": {"$ref": "#/$defs/overallResult"},
+    "evaluations": {
+      "description": "Verifier-produced output. Scenario inputs MUST NOT supply or inherit this field as if it were a result computed for that scenario.",
+      "$ref": "#/$defs/evaluationSet"
+    },
+    "overall_result": {
+      "description": "Verifier-produced aggregate output under evaluation_contract. Scenario inputs MUST NOT supply or inherit this field as if it were computed for that scenario.",
+      "$ref": "#/$defs/overallResult"
+    },
     "limitations": {
       "type": "array",
       "items": {"type": "string", "minLength": 1}
