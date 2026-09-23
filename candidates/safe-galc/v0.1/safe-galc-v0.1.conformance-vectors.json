@@ -5,7 +5,9 @@
     "generated_at": "2026-09-17T14:00:00Z",
     "profile": "safe-galc/0.1",
     "schema": "safe-galc-v0.1.schema.json",
-    "fixture_model": "Apply each vector's semantic changes to base_lifecycle before integrity generation unless recompute_integrity is false.",
+    "fixture_model": "Deep-copy base_lifecycle and apply each vector's add, remove, and replace operations in listed order using JSON Pointer paths.",
+    "integrity_recomputation": "When recompute_integrity is true, recompute affected record payload digests under the declared canonicalization and digest algorithm, update dependent record references and typed-link endpoints transitively, and regenerate or remove invalidated integrity assertions. When false, preserve the deliberate inconsistency.",
+    "evaluation_model": "Expected results are test expectations, not supplied verifier evidence. A verifier independently evaluates the materialized lifecycle under evaluation_contract.",
     "digest_values": "Synthetic identifiers for semantic testing; they are not hashes of the fixture bytes.",
     "claim_boundary": "These are machine-readable scenario skeletons, not cryptographic known-answer vectors and not evidence of an implementation run."
   },
@@ -44,8 +46,20 @@
           "reference": "urn:example:anchor:proposal-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:proposal-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:proposal-1",
+            "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:proposal-1",
+              "digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+            }
+          ]
         },
         "data": {
           "originating_principal": {
@@ -106,8 +120,20 @@
           "reference": "urn:example:anchor:determination-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:determination-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:determination-1",
+            "digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:determination-1",
+              "digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+            }
+          ]
         },
         "data": {
           "proposal_ref": {
@@ -163,8 +189,20 @@
           "reference": "urn:example:anchor:enforcement-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:enforcement-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:enforcement-1",
+            "digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:enforcement-1",
+              "digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+            }
+          ]
         },
         "data": {
           "determination_ref": {
@@ -236,8 +274,20 @@
           "reference": "urn:example:anchor:execution-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:execution-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:execution-1",
+            "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:execution-1",
+              "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ]
         },
         "data": {
           "enforcement_ref": {
@@ -298,8 +348,20 @@
           "reference": "urn:example:anchor:observation-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:observation-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:observation-1",
+            "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:observation-1",
+              "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          ]
         },
         "data": {
           "observer": {
@@ -356,8 +418,20 @@
           "reference": "urn:example:anchor:reconciliation-1"
         },
         "custody": {
-          "status": "complete",
-          "reference": "urn:example:custody:reconciliation-1"
+          "status": "accepted_available",
+          "result_ref": {
+            "record_id": "urn:example:custody:reconciliation-1",
+            "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+          "method": "safe-custody-receipt-projection",
+          "method_version": "0.1",
+          "evidence_basis": [
+            {
+              "record_id": "urn:example:custody:reconciliation-1",
+              "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
         },
         "data": {
           "record_refs": [
@@ -524,6 +598,27 @@
         }
       }
     ],
+    "evaluation_contract": {
+      "property_set_id": "safe-galc/0.1/full-lifecycle",
+      "mandatory_properties": [
+        "component_integrity",
+        "proposal_binding",
+        "authority_validity",
+        "determination_validity",
+        "enforcement_binding",
+        "execution_binding",
+        "consequence_binding",
+        "replay_resistance"
+      ],
+      "aggregation_rule_id": "safe-galc/0.1/mandatory-precedence",
+      "aggregation_rule_version": "1",
+      "verifier_method_id": "urn:example:method:safe-galc-semantic-verifier",
+      "verifier_method_version": "0.1",
+      "independence": {
+        "status": "not_claimed",
+        "basis": ["Synthetic fixture; verifier independence is not established."]
+      }
+    },
     "evaluations": [
       {
         "property": "component_integrity",
@@ -754,7 +849,7 @@
       "recompute_integrity": true,
       "expected": {
         "overall_result": "insufficient_evidence",
-        "evaluations": {"execution_binding": "fail", "consequence_binding": "insufficient_evidence"},
+        "evaluations": {"execution_binding": "pass", "consequence_binding": "insufficient_evidence"},
         "reason_codes": ["execution_partial"]
       },
       "forbidden_inference": "Command acceptance must not be reported as completed execution."
@@ -781,13 +876,129 @@
       "title": "Conflicting resulting-state observers",
       "semantic_changes": [
         {
-          "operation": "add_conflicting_observation",
-          "path": "/base_lifecycle/records",
+          "operation": "add",
+          "path": "/base_lifecycle/records/-",
           "value": {
             "record_id": "urn:example:record:observation-conflict",
-            "observed_state_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            "record_type": "observation",
+            "schema_id": "urn:example:schema:observation:1",
+            "canonicalization_id": "rfc8785-jcs",
+            "digest_algorithm": "sha-256",
+            "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "producer": {
+              "id": "urn:example:observer:3",
+              "trust_domain": "independent-observation.example"
+            },
+            "issued_at": "2026-09-17T12:00:05Z",
+            "availability": "available",
+            "integrity": {
+              "status": "pass",
+              "method": "example-signature-profile",
+              "signature_ref": "urn:example:signature:observation-conflict",
+              "key_ref": "urn:example:key:observer-3"
+            },
+            "anchor": {
+              "status": "anchored",
+              "reference": "urn:example:anchor:observation-conflict"
+            },
+            "custody": {
+              "status": "accepted_available",
+              "result_ref": {
+                "record_id": "urn:example:custody:observation-conflict",
+                "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              "verifier": {"id": "urn:example:verifier:custody-1", "trust_domain": "custody.example"},
+              "method": "safe-custody-receipt-projection",
+              "method_version": "0.1",
+              "evidence_basis": [
+                {
+                  "record_id": "urn:example:custody:observation-conflict",
+                  "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+                }
+              ]
+            },
+            "data": {
+              "observer": {
+                "id": "urn:example:observer:3",
+                "trust_domain": "independent-observation.example",
+                "role": "state-observer"
+              },
+              "method": "independent-state-observation",
+              "method_version": "1.0",
+              "target": {
+                "id": "urn:example:shelf:42",
+                "trust_domain": "edge.example",
+                "resource_type": "inventory-location"
+              },
+              "execution_ref": {
+                "record_id": "urn:example:record:execution-1",
+                "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+              },
+              "transition_ref": "urn:example:transition:inventory-42",
+              "observed_state": {
+                "id": "urn:example:state:shelf-42:8",
+                "digest": "sha256:abababababababababababababababababababababababababababababababab",
+                "schema_id": "urn:example:schema:inventory-state:1",
+                "predicate": "available_units == 8"
+              },
+              "observed_at": "2026-09-17T12:00:05Z",
+              "freshness_seconds": 5,
+              "independence_basis": "Separately administered observer with distinct signing key and data path.",
+              "confidence": 0.98,
+              "limitations": ["Synthetic conflicting observation; no external truth claim is made."]
+            }
           }
-        }
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/links/-",
+          "value": {
+            "link_id": "urn:example:link:observes-conflict",
+            "relation": "observes",
+            "source": {
+              "record_id": "urn:example:record:observation-conflict",
+              "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            },
+            "target": {
+              "record_id": "urn:example:record:execution-1",
+              "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+            },
+            "asserted_by": {
+              "id": "urn:example:observer:3",
+              "trust_domain": "independent-observation.example"
+            },
+            "asserted_at": "2026-09-17T12:00:05Z",
+            "schema_id": "urn:example:schema:lifecycle-link:1",
+            "canonicalization_id": "rfc8785-jcs",
+            "integrity": {"status": "pass", "method": "example-signature-profile"}
+          }
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/5/data/record_refs/-",
+          "value": {
+            "record_id": "urn:example:record:observation-conflict",
+            "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/5/data/observed_state_refs/-",
+          "value": {
+            "record_id": "urn:example:record:observation-conflict",
+            "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        },
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/5/data/result",
+          "value": "conflicting"
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/5/data/reason_codes/-",
+          "value": "observation_conflict"
+          }
       ],
       "recompute_integrity": true,
       "expected": {
@@ -822,18 +1033,23 @@
     },
     {
       "id": "GALC-011",
-      "title": "Anchored evidence with incomplete custody",
+      "title": "Anchored evidence with insufficient custody evidence",
       "semantic_changes": [
         {
           "operation": "replace",
           "path": "/base_lifecycle/records/4/custody/status",
-          "value": "incomplete"
+          "value": "insufficient_evidence"
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/4/custody/limitations",
+          "value": ["The referenced custody result cannot presently establish complete continuity."]
         }
       ],
       "recompute_integrity": true,
       "expected": {
         "overall_result": "correlated",
-        "evaluations": {"temporal_anchoring": "pass", "custody_continuity": "fail"},
+        "evaluations": {"temporal_anchoring": "pass", "custody_continuity": "insufficient_evidence"},
         "reason_codes": ["custody_gap"]
       },
       "forbidden_inference": "Anchoring must not imply a complete handling history."
@@ -885,6 +1101,118 @@
         "reason_codes": ["grounding_unresolved"]
       },
       "forbidden_inference": "Cryptographic integrity and lifecycle correlation must not be represented as proof of external truth."
+    },
+    {
+      "id": "GALC-015",
+      "title": "Sender-side offer without counterparty acceptance",
+      "semantic_changes": [
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/status",
+          "value": "offered_not_accepted"
+        },
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/result_ref/record_id",
+          "value": "urn:example:custody-offer:observation-1"
+        },
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/result_ref/digest",
+          "value": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+        },
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/evidence_basis/0/record_id",
+          "value": "urn:example:custody-offer:observation-1"
+        },
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/evidence_basis/0/digest",
+          "value": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+        }
+      ],
+      "recompute_integrity": true,
+      "expected": {
+        "overall_result": "correlated",
+        "evaluations": {"custody_continuity": "fail"},
+        "reason_codes": ["custody_not_accepted"]
+      },
+      "forbidden_inference": "Sender-side creation or transmission of an offer must not be represented as counterparty acceptance."
+    },
+    {
+      "id": "GALC-016",
+      "title": "Accepted custody evidence later unavailable",
+      "semantic_changes": [
+        {
+          "operation": "replace",
+          "path": "/base_lifecycle/records/4/custody/status",
+          "value": "accepted_unavailable"
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/4/custody/evidence_basis/-",
+          "value": {
+            "record_id": "urn:example:custody-loss:observation-1",
+            "digest": "sha256:dededededededededededededededededededededededededededededededede"
+          }
+        },
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/records/4/custody/limitations",
+          "value": ["The previously accepted artifact is no longer retrievable."]
+        }
+      ],
+      "recompute_integrity": true,
+      "expected": {
+        "overall_result": "correlated",
+        "evaluations": {"custody_continuity": "insufficient_evidence"},
+        "reason_codes": ["custody_accepted_then_unavailable"]
+      },
+      "forbidden_inference": "Prior acceptance must not be rewritten as current availability or as never having been accepted."
+    },
+    {
+      "id": "GALC-017",
+      "title": "Accepted custody claim without result reference",
+      "semantic_changes": [
+        {
+          "operation": "remove",
+          "path": "/base_lifecycle/records/4/custody/result_ref"
+        }
+      ],
+      "recompute_integrity": true,
+      "expected": {
+        "schema_validation": "fail",
+        "overall_result": "insufficient_evidence",
+        "evaluations": {"custody_continuity": "insufficient_evidence"},
+        "reason_codes": ["custody_result_reference_missing"]
+      },
+      "forbidden_inference": "A producer-supplied accepted status must not establish custody continuity without a checkable result identity."
+    },
+    {
+      "id": "GALC-018",
+      "title": "Duplicate evaluation of one property",
+      "semantic_changes": [
+        {
+          "operation": "add",
+          "path": "/base_lifecycle/evaluations/-",
+          "value": {
+            "property": "execution_binding",
+            "result": "fail",
+            "checked_at": "2026-09-17T12:00:07Z",
+            "verifier": {"id": "urn:example:verifier:2", "trust_domain": "review.example"},
+            "reason_codes": ["duplicate_property_evaluation"]
+          }
+        }
+      ],
+      "recompute_integrity": true,
+      "expected": {
+        "schema_validation": "fail",
+        "overall_result": "correlation_failed",
+        "evaluations": {"execution_binding": "fail"},
+        "reason_codes": ["duplicate_property_evaluation"]
+      },
+      "forbidden_inference": "A verifier must not select a preferred duplicate result or report the evaluation set as correlated."
     }
   ]
 }

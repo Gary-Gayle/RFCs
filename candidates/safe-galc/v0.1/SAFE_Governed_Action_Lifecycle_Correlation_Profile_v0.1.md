@@ -3,7 +3,7 @@
 - **Candidate version:** 0.1
 - **Profile identifier:** `safe-galc/0.1`
 - **Date:** 2026-09-17
-- **Last revised:** 2026-09-21
+- **Last revised:** 2026-09-23
 - **Status:** Candidate contribution draft — not adopted
 - **Prepared by:** Gary Gayle, Founder and CEO, Value Intelligence Solutions Inc.
 - **Related research:** R.E.T.N.A.™ Proof of Governed State / Distributed Governance R&D
@@ -205,6 +205,7 @@ The envelope MUST contain:
 | `producer` | Identity and trust domain of the envelope producer |
 | `records` | Typed lifecycle records |
 | `links` | Typed, integrity-protected relationships |
+| `evaluation_contract` | Versioned property-set, verifier-method, and aggregation-rule identifiers |
 | `evaluations` | Independent property results |
 | `limitations` | Known gaps, unavailable evidence, or residual uncertainty |
 
@@ -223,7 +224,7 @@ Every record MUST contain:
 - issuance time claim;
 - signature or integrity mechanism reference;
 - availability state; and
-- any applicable anchoring and custody references or explicit unavailable states.
+- any applicable anchoring reference and a loss-aware custody projection, or explicit unavailable states.
 
 Permitted record types in version 0.1 are:
 
@@ -235,6 +236,20 @@ Permitted record types in version 0.1 are:
 - `reconciliation_result`.
 
 Transforming, redacting, normalizing, aggregating, or reserializing a record creates a new record identity and digest. The transformed record MUST link to its inputs or explicitly declare that linkage unavailable.
+
+### 8.2.1 Loss-aware custody projection
+
+This profile consumes custody evidence produced under PR #27 or a successor without redefining its receipt or transfer mechanisms. A record's custody projection MUST preserve, at minimum, these distinct states:
+
+- `never_provided`;
+- `offered_not_accepted`;
+- `accepted_available`;
+- `accepted_unavailable`; and
+- `insufficient_evidence`.
+
+The projection MUST identify the verifier, verifier method and version, and the evidence basis used. When a custody result or receipt exists, the projection MUST reference its immutable identity and digest. An `accepted_available` projection MUST include a retrievable result reference and MUST NOT be derived solely from a producer-supplied summary. An `accepted_unavailable` projection MUST preserve the last accepted result identity and the evidence supporting subsequent loss of availability.
+
+Sender-side success, including creation or transmission of an offer, MUST NOT be represented as counterparty acceptance. A missing, inaccessible, or unverifiable custody result MUST NOT produce `custody_continuity: pass`. Transformation creates a new evidence identity and MUST preserve references to the applicable input and output custody results.
 
 ### 8.3 Proposed-transition record
 
@@ -403,6 +418,35 @@ The minimum evaluation matrix is:
 | `producer_basis` | What evidence supports producer identity, control, and any claimed separation? |
 | `grounding` | What supports correspondence between the records and external reality? |
 
+### 10.1 Evaluation contract and applicability
+
+Every evaluation set MUST identify:
+
+- a versioned property-set identifier;
+- the mandatory properties in that set;
+- the verifier method identifier and version;
+- a versioned aggregation rule; and
+- whether verifier independence is claimed and the evidence basis for that claim.
+
+Version 0.1 defines the full-lifecycle property set `safe-galc/0.1/full-lifecycle`. Its mandatory correlation properties are:
+
+- `component_integrity`;
+- `proposal_binding`;
+- `authority_validity`;
+- `determination_validity`;
+- `enforcement_binding`;
+- `execution_binding`;
+- `consequence_binding`; and
+- `replay_resistance`.
+
+Each mandatory property MUST appear exactly once. `temporal_anchoring`, `custody_continuity`, `producer_basis`, and `grounding` MAY also appear, but no property may appear more than once in one evaluation set. Duplicate or conflicting results for the same property make the evaluation set non-conformant and MUST prevent an overall result of `correlated`.
+
+Applicability is determined from the lifecycle stages and claims being evaluated. A legitimately absent stage, such as execution after a denied determination, MUST be reported as `not_applicable` with an explanatory reason code; implementations MUST NOT fabricate execution or observation records. A required stage or evidence item that cannot be obtained is `insufficient_evidence`, not `not_applicable`.
+
+Verifier identity alone does not establish a verification method or verifier independence. Method and version MUST be explicit. Independence MUST NOT be claimed without a stated basis addressing relevant administrative control, infrastructure, data dependencies, signing authority, and recovery paths.
+
+### 10.2 Overall-result aggregation
+
 An implementation MAY calculate an overall lifecycle result, but it MUST retain the property matrix and MUST NOT convert `insufficient_evidence` into `pass`.
 
 If reported, `overall_result` MUST be one of:
@@ -412,7 +456,16 @@ If reported, `overall_result` MUST be one of:
 - `insufficient_evidence`; or
 - `not_applicable`.
 
-`correlated` requires `pass` for all mandatory correlation properties applicable to the lifecycle. It does not mean safe, trustworthy, truthful, or authorized in a broader legal or organizational sense.
+Version 0.1 defines aggregation rule `safe-galc/0.1/mandatory-precedence`, version `1`:
+
+1. if any applicable mandatory property is `fail`, the overall result is `correlation_failed`;
+2. otherwise, if any applicable mandatory property is `insufficient_evidence`, the overall result is `insufficient_evidence`;
+3. otherwise, if every applicable mandatory property is `pass` and at least one mandatory property is applicable, the overall result is `correlated`; and
+4. if no mandatory property is applicable, the overall result is `not_applicable`.
+
+`not_applicable` properties do not affect aggregation. The independently reported `temporal_anchoring`, `custody_continuity`, `producer_basis`, and `grounding` properties do not alter `overall_result` under this rule; their failures and uncertainties MUST remain visible and MUST NOT be rewritten as success.
+
+`correlated` does not mean safe, trustworthy, truthful, or authorized in a broader legal or organizational sense.
 
 ## 11. Material change and TOCTOU
 
@@ -488,6 +541,10 @@ Version 0.1 defines the following minimum reason-code vocabulary:
 | `consequence_mismatch` | Observed state does not satisfy the governed transition predicate |
 | `observer_basis_unknown` | The claimed observer relationship cannot be established |
 | `custody_gap` | Required custody transition or transformation evidence is missing |
+| `custody_not_accepted` | Sender-side success exists without counterparty acceptance |
+| `custody_accepted_then_unavailable` | Evidence was accepted but is no longer available for verification |
+| `custody_result_reference_missing` | A custody projection claims acceptance without a checkable result identity |
+| `duplicate_property_evaluation` | More than one result was supplied for the same property in one evaluation set |
 | `anchor_unavailable` | Temporal anchoring status cannot be established |
 | `correlation_ambiguous` | More than one lifecycle relationship remains plausible |
 | `grounding_unresolved` | Record integrity verifies but correspondence to reality remains unresolved |
@@ -564,7 +621,10 @@ A conformant verifier:
 5. reports each independent property separately;
 6. preserves `fail` and `insufficient_evidence` results;
 7. does not upgrade anchoring, custody, signature, attestation, or consensus into truth; and
-8. emits canonical or namespaced reason codes.
+8. emits canonical or namespaced reason codes;
+9. identifies its method and version and does not infer independence from identity alone;
+10. emits each mandatory property exactly once under a declared property set; and
+11. applies the declared aggregation rule without allowing non-aggregating properties to disappear.
 
 ### 15.3 Full-lifecycle profile conformance
 
@@ -594,7 +654,7 @@ The companion conformance file defines machine-readable skeletons for these mini
 | `GALC-004` | Authority revoked between issuance and irreversible boundary | `correlation_failed` |
 | `GALC-005` | Executed parameters differ materially from authorized parameters | `correlation_failed` |
 | `GALC-006` | Previously consumed determination is replayed | `correlation_failed` |
-| `GALC-007` | Execution reports partial completion | `insufficient_evidence` or `correlation_failed`, according to declared transition predicate |
+| `GALC-007` | Execution reports partial completion while the attempted operation remains correctly bound | Execution binding `pass`; consequence binding and overall result `insufficient_evidence` |
 | `GALC-008` | Required resulting-state observation is missing | `insufficient_evidence` |
 | `GALC-009` | Independent observers conflict | `insufficient_evidence` |
 | `GALC-010` | Internal records agree; observed consequence differs | `correlation_failed` |
@@ -602,6 +662,23 @@ The companion conformance file defines machine-readable skeletons for these mini
 | `GALC-012` | Custody passes; temporal anchoring unavailable | Correlation evaluated separately; anchoring `insufficient_evidence` |
 | `GALC-013` | All component records verify; lifecycle link digest is wrong | `correlation_failed` |
 | `GALC-014` | Component and correlation integrity pass; external truth cannot be independently established | Correlation MAY pass; grounding `insufficient_evidence` |
+| `GALC-015` | Sender reports a successful offer without counterparty acceptance | Custody `fail`; sender-side success MUST NOT become acceptance |
+| `GALC-016` | Evidence was accepted and later became unavailable | Custody `insufficient_evidence`; preserve prior acceptance and later loss |
+| `GALC-017` | Custody claims acceptance without a referenced result | Structural validation fails; custody MUST NOT pass |
+| `GALC-018` | Two evaluations report the same property | Structural validation fails; overall result MUST NOT be `correlated` |
+
+### 16.1 Scenario construction contract
+
+The companion file remains candidate scenario material rather than cryptographic known-answer evidence. A conforming scenario materializer MUST:
+
+1. deep-copy `base_lifecycle` for each vector;
+2. apply `semantic_changes` in listed order using only `add`, `remove`, and `replace` operations with JSON Pointer path semantics;
+3. when `recompute_integrity` is `true`, recompute each affected record payload digest using its declared canonicalization and digest algorithm, update every dependent record reference and typed-link endpoint transitively, and regenerate or remove any integrity assertion invalidated by changed bytes;
+4. when `recompute_integrity` is `false`, preserve the deliberately inconsistent digest or link so the verifier can detect it;
+5. treat vector `expected` results as test expectations, never as verifier-produced evidence; and
+6. independently recompute evaluations and `overall_result` using the declared evaluation contract.
+
+Supplied fixture digests remain synthetic placeholders and therefore do not establish cryptographic conformance. A materialized implementation run MUST emit newly computed digests and identify the canonicalization, digest, verifier-method, property-set, and aggregation-rule versions it used.
 
 ## 17. Security and abuse considerations
 
@@ -700,6 +777,8 @@ Implementations MUST:
 
 Schema validation establishes structural conformance only. It does not establish semantic correctness, integrity, authorization, or external truth.
 
+Structural validation MUST reject a missing required custody-result reference and duplicate property evaluations. Digest and link-target equality remain semantic checks that require a verifier; the `GALC-013` negative control exercises that boundary.
+
 ## 21. Adoption and implementation sequence
 
 The smallest useful adoption sequence is:
@@ -768,8 +847,9 @@ It would not establish that:
 - `SAFE_Governed_Action_Lifecycle_Correlation_Profile_v0.1.md` — normative candidate profile
 - `safe-galc-v0.1.schema.json` — candidate JSON Schema representation
 - `safe-galc-v0.1.conformance-vectors.json` — candidate machine-readable conformance skeletons
+- `validate_safe_galc_vectors.py` — structural materializer and Draft 2020-12 validation harness (`jsonschema` 4.25.1)
 
-The schema and vectors are candidate evaluation material. They are not adopted SAFE artifacts and do not establish conformance by their existence.
+The schema, vectors, and validation harness are candidate evaluation material. They are not adopted SAFE artifacts and do not establish cryptographic, semantic, runtime, or SAFE conformance by their existence or successful structural validation.
 
 ## Appendix B — Disclosure
 
