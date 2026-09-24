@@ -121,12 +121,47 @@
     },
     "anchorStatus": {
       "type": "object",
-      "required": ["status"],
+      "required": [
+        "status"
+      ],
       "properties": {
-        "status": {"enum": ["anchored", "unanchored", "unavailable"]},
-        "reference": {"$ref": "#/$defs/identifier"}
+        "status": {
+          "enum": [
+            "anchored",
+            "unanchored",
+            "unavailable"
+          ]
+        },
+        "reference": {
+          "$ref": "#/$defs/identifier",
+          "description": "Locator for the anchoring result evaluated under #18 or its successor."
+        },
+        "result_ref": {
+          "$ref": "#/$defs/recordRef"
+        }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "A supplied anchoring claim, not a GALC verifier result. An anchored claim requires a locator and an immutable result identity/digest. The referenced result must satisfy section 8.2.2; JSON Schema does not resolve or verify it.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "anchored"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "reference",
+              "result_ref"
+            ]
+          }
+        }
+      ]
     },
     "custodyProjection": {
       "type": "object",

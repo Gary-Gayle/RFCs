@@ -2,8 +2,9 @@
 """Structural materializer and validator for SAFE-GALC candidate vectors.
 
 This harness checks JSON Schema Draft 2020-12 structure and reproducible
-application of the candidate vector operations. It can emit scenario inputs
-separately from expected verifier outputs. It does not verify cryptography,
+application of the candidate vector operations and oracle consistency. It emits
+labelled fixtures, scenario inputs, contexts, and scoped expectations separately.
+It does not compute semantic results, verify cryptography,
 recompute payload digests, or establish semantic/runtime conformance.
 """
 
@@ -24,6 +25,19 @@ SCHEMA_PATH = ROOT / "safe-galc-v0.1.schema.json"
 VECTORS_PATH = ROOT / "safe-galc-v0.1.conformance-vectors.json"
 ALLOWED_OPERATIONS = {"add", "remove", "replace"}
 VERIFIER_OUTPUT_FIELDS = ("evaluations", "overall_result")
+TEST_SCOPES = {
+    "semantic_scenario",
+    "structural_input_negative",
+    "output_envelope_negative",
+}
+PROPERTY_RESULTS = {"pass", "fail", "insufficient_evidence", "not_applicable"}
+OVERALL_RESULTS = {
+    "correlated",
+    "correlation_failed",
+    "insufficient_evidence",
+    "not_applicable",
+}
+COMPARISON_RULE = "safe-galc/0.1/partial-expectations/1"
 
 
 def _parse_args() -> argparse.Namespace:
@@ -34,8 +48,9 @@ def _parse_args() -> argparse.Namespace:
         "--emit-dir",
         type=Path,
         help=(
-            "Write separate <scenario>.scenario-input.json and "
-            "<scenario>.expected-output.json artifacts."
+            "Write separate labelled fixture-envelope, scenario-input, "
+            "verification-context, and expected-output JSON artifacts. "
+            "The destination must be empty."
         ),
     )
     return parser.parse_args()
@@ -100,15 +115,116 @@ def _project_scenario_input(fixture_envelope: dict[str, Any]) -> dict[str, Any]:
 def _expected_output(vector: dict[str, Any]) -> dict[str, Any]:
     expected = copy.deepcopy(vector["expected"])
     expected_validation = expected.pop("schema_validation", "pass")
-    return {
+    applicable = vector["test_scope"] == "semantic_scenario"
+    output = {
         "scenario_id": vector["id"],
+        "test_scope": vector["test_scope"],
         "structural_fixture_validation": {
             "target": "fixture_envelope",
             "expected": expected_validation,
         },
-        "semantic_verifier_output": expected,
+        "semantic_comparison": {
+            "status": "applicable" if applicable else "not_applicable",
+            "rule_id": COMPARISON_RULE,
+            "reason": (
+                "Compare independently produced results only after structural success."
+                if applicable
+                else "Structural negative control; no semantic-output oracle."
+            ),
+        },
         "forbidden_inference": vector["forbidden_inference"],
     }
+    if applicable:
+        output["semantic_verifier_output"] = expected
+    return output
+
+
+def _validate_vector_scope(vector: dict[str, Any], schema: dict[str, Any]) -> None:
+    scope = vector.get("test_scope")
+    if scope not in TEST_SCOPES:
+        raise ValueError(f"unknown test_scope: {scope!r}")
+    if not isinstance(vector.get("recompute_integrity"), bool):
+        raise ValueError("recompute_integrity must be boolean")
+    expected = vector["expected"]
+    if scope != "semantic_scenario":
+        if expected != {"schema_validation": "fail"}:
+            raise ValueError("structural negatives must have no semantic oracle")
+        return
+    if expected.get("schema_validation", "pass") != "pass":
+        raise ValueError("semantic scenarios require structural success")
+    if set(expected) - {
+        "schema_validation",
+        "overall_result",
+        "evaluations",
+        "reason_codes",
+    }:
+        raise ValueError("unknown expected-output fields")
+    if (
+        "overall_result" in expected
+        and expected["overall_result"] not in OVERALL_RESULTS
+    ):
+        raise ValueError("unknown expected overall result")
+    properties = schema["$defs"]["evaluation"]["properties"]["property"]["enum"]
+    evaluations = expected.get("evaluations", {})
+    if not isinstance(evaluations, dict) or any(
+        prop not in properties or result not in PROPERTY_RESULTS
+        for prop, result in evaluations.items()
+    ):
+        raise ValueError("invalid partial evaluation expectation")
+    reasons = expected.get("reason_codes", [])
+    if not isinstance(reasons, list) or any(
+        not isinstance(code, str) or not code for code in reasons
+    ):
+        raise ValueError("reason_codes must be a list of nonempty strings")
+
+
+def _materialize_vector(
+    vectors: dict[str, Any], vector: dict[str, Any]
+) -> dict[str, Any]:
+    materialized = {
+        "base_lifecycle": copy.deepcopy(vectors["base_lifecycle"]),
+        "base_verification_context": copy.deepcopy(
+            vectors["base_verification_context"]
+        ),
+    }
+    for operation in vector["semantic_changes"]:
+        _apply_operation(materialized, operation)
+    return materialized
+
+
+def _check_oracle_consistency(cases: list[dict[str, Any]]) -> None:
+    """Check compatible partial oracles; do not compute verifier outcomes."""
+    groups: dict[str, dict[str, Any]] = {}
+    for case in cases:
+        vector = case["vector"]
+        if vector["test_scope"] != "semantic_scenario":
+            continue
+        key = json.dumps(
+            {
+                "scenario_input": case["scenario_input"],
+                "verification_context": case["verification_context"],
+                "recompute_integrity": vector["recompute_integrity"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+        group = groups.setdefault(key, {"ids": [], "assertions": {}})
+        assertions = {
+            f"property:{prop}": value
+            for prop, value in vector["expected"].get("evaluations", {}).items()
+        }
+        if "overall_result" in vector["expected"]:
+            assertions["overall_result"] = vector["expected"]["overall_result"]
+        for name, value in assertions.items():
+            previous = group["assertions"].get(name)
+            if previous is not None and previous != value:
+                raise ValueError(
+                    f"incompatible semantic oracles for {group['ids']} and "
+                    f"{vector['id']}: {name} is {previous!r} versus {value!r}"
+                )
+            group["assertions"][name] = value
+        group["ids"].append(vector["id"])
 
 
 def _write_json(path: Path, document: Any) -> None:
@@ -127,11 +243,14 @@ def main() -> int:
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
 
     vector_ids = [vector["id"] for vector in vectors["vectors"]]
-    expected_ids = [f"GALC-{index:03d}" for index in range(1, 19)]
+    expected_ids = [f"GALC-{index:03d}" for index in range(1, 23)]
     if vector_ids != expected_ids:
         print(
             f"FAIL: expected ordered vector IDs {expected_ids}, received {vector_ids}"
         )
+        return 1
+    if vectors["manifest"].get("scenario_count") != len(expected_ids):
+        print("FAIL: manifest scenario_count does not match the inventory")
         return 1
 
     base_errors = sorted(
@@ -155,15 +274,12 @@ def main() -> int:
         "results remain separate test oracles"
     )
 
-    if args.emit_dir is not None:
-        args.emit_dir.mkdir(parents=True, exist_ok=True)
-
     failed = False
+    cases = []
     for vector in vectors["vectors"]:
-        materialized = copy.deepcopy(vectors)
         try:
-            for operation in vector["semantic_changes"]:
-                _apply_operation(materialized, operation)
+            _validate_vector_scope(vector, schema)
+            materialized = _materialize_vector(vectors, vector)
         except (KeyError, IndexError, TypeError, ValueError) as error:
             print(f"FAIL: {vector['id']} could not be materialized: {error}")
             failed = True
@@ -183,15 +299,14 @@ def main() -> int:
             failed = True
             continue
 
-        if args.emit_dir is not None:
-            _write_json(
-                args.emit_dir / f"{vector['id']}.scenario-input.json",
-                scenario_input,
-            )
-            _write_json(
-                args.emit_dir / f"{vector['id']}.expected-output.json",
-                _expected_output(vector),
-            )
+        cases.append(
+            {
+                "vector": vector,
+                "fixture_envelope": materialized["base_lifecycle"],
+                "scenario_input": scenario_input,
+                "verification_context": materialized["base_verification_context"],
+            }
+        )
 
         if actual_validation != expected_validation:
             print(
@@ -213,10 +328,39 @@ def main() -> int:
     if failed:
         return 1
 
-    print("PASS: 18 ordered vectors materialized with expected structural outcomes")
+    try:
+        _check_oracle_consistency(cases)
+    except ValueError as error:
+        print(f"FAIL: {error}")
+        return 1
+    print("PASS: eligible semantic oracles are consistent for identical inputs/context")
+    print("PASS: 22 ordered vectors materialized with expected structural outcomes")
     if args.emit_dir is not None:
+        if args.emit_dir.exists() and (
+            not args.emit_dir.is_dir() or any(args.emit_dir.iterdir())
+        ):
+            print(
+                "FAIL: --emit-dir must be an empty directory; refusing stale artifacts"
+            )
+            return 1
+        args.emit_dir.mkdir(parents=True, exist_ok=True)
+        for case in cases:
+            vector = case["vector"]
+            artifacts = {
+                "fixture-envelope": {
+                    "artifact_role": "structural_fixture_only",
+                    "scenario_id": vector["id"],
+                    "test_scope": vector["test_scope"],
+                    "fixture_envelope": case["fixture_envelope"],
+                },
+                "scenario-input": case["scenario_input"],
+                "verification-context": case["verification_context"],
+                "expected-output": _expected_output(vector),
+            }
+            for suffix, document in artifacts.items():
+                _write_json(args.emit_dir / f"{vector['id']}.{suffix}.json", document)
         print(
-            "PASS: separate scenario-input and expected-output artifacts "
+            "PASS: separate fixtures, inputs, contexts, and scoped expectations "
             f"emitted to {args.emit_dir}"
         )
     print("LIMIT: no cryptographic, semantic, or runtime conformance is claimed")

@@ -3,7 +3,7 @@
 - **Candidate version:** 0.1
 - **Profile identifier:** `safe-galc/0.1`
 - **Date:** 2026-09-17
-- **Last revised:** 2026-09-23
+- **Last revised:** 2026-09-24
 - **Status:** Candidate contribution draft — not adopted
 - **Prepared by:** Gary Gayle, Founder and CEO, Value Intelligence Solutions Inc.
 - **Related research:** R.E.T.N.A.™ Proof of Governed State / Distributed Governance R&D
@@ -250,6 +250,25 @@ This profile consumes custody evidence produced under PR #27 or a successor with
 The projection MUST identify the verifier, verifier method and version, and the evidence basis used. When a custody result or receipt exists, the projection MUST reference its immutable identity and digest. An `accepted_available` projection MUST include a retrievable result reference and MUST NOT be derived solely from a producer-supplied summary. An `accepted_unavailable` projection MUST preserve the last accepted result identity and the evidence supporting subsequent loss of availability.
 
 Sender-side success, including creation or transmission of an offer, MUST NOT be represented as counterparty acceptance. A missing, inaccessible, or unverifiable custody result MUST NOT produce `custody_continuity: pass`. Transformation creates a new evidence identity and MUST preserve references to the applicable input and output custody results.
+
+### 8.2.2 Anchoring-result projection
+
+This profile consumes anchoring results under PR #18 or a successor; it does not define a replacement anchoring protocol. A supplied `anchor.status: anchored` is a claim requiring verification, not a produced `temporal_anchoring: pass` result. In the JSON representation, an anchored claim MUST include `reference` (a result locator) and `result_ref` (the immutable result identity and digest). Missing either is a structural error. `unanchored` and `unavailable` remain distinct supplied states and do not imply successful verification.
+
+The referenced result, directly or through its digest-bound evidence, MUST identify:
+
+- the exact anchored object and its kind (for example, record payload or receipt), identity, digest algorithm and digest;
+- the object's schema and canonicalization or explicit byte-representation rule;
+- the immutable anchoring-result identity and digest matching `result_ref`;
+- the verifier identity/trust domain, method and version;
+- immutable references to the evidence actually evaluated; and
+- the inclusion, independently authenticated timing, and history-consistency basis actually checked, with unavailable checks and limitations explicit.
+
+These details MAY remain in the referenced #18 result instead of being duplicated in the lifecycle record. A locator alone does not establish their existence, integrity, or applicability. The consumer MUST verify the result binding to the particular object whose anchoring it reports. Anchoring a receipt MUST NOT be promoted into anchoring its referenced payload. A result for a different object cannot substantiate the lifecycle record's anchoring claim.
+
+For structurally well-formed claims, missing, inaccessible, or otherwise unevaluable referenced result evidence MUST produce `temporal_anchoring: insufficient_evidence` for the affected applicable claim. Demonstrated integrity failure or a demonstrated object/result binding mismatch MUST produce `fail`. Inclusion that verifies while time remains solely operator-asserted MUST NOT produce `pass`; it produces `insufficient_evidence` for temporal anchoring. Producer assertions about these checks MUST NOT substitute for the checks. For a lifecycle-wide temporal evaluation of multiple applicable anchoring claims, any demonstrated failure takes precedence over insufficient evidence; otherwise any unresolved required claim prevents `pass`.
+
+The temporal result remains separate from mandatory correlation aggregation in section 10.2. Thus correlation can be `correlated` while temporal anchoring is `fail` or `insufficient_evidence`. The schema checks required references, not their retrieval, cryptography, or temporal validity.
 
 ### 8.3 Proposed-transition record
 
@@ -545,7 +564,9 @@ Version 0.1 defines the following minimum reason-code vocabulary:
 | `custody_accepted_then_unavailable` | Evidence was accepted but is no longer available for verification |
 | `custody_result_reference_missing` | A custody projection claims acceptance without a checkable result identity |
 | `duplicate_property_evaluation` | More than one result was supplied for the same property in one evaluation set |
-| `anchor_unavailable` | Temporal anchoring status cannot be established |
+| `anchor_unavailable` | Required anchoring evidence cannot be obtained or evaluated |
+| `anchor_time_unsubstantiated` | Inclusion evidence does not independently authenticate the claimed time |
+| `anchor_result_invalid` | Anchoring result integrity or exact-object binding demonstrably fails |
 | `correlation_ambiguous` | More than one lifecycle relationship remains plausible |
 | `grounding_unresolved` | Record integrity verifies but correspondence to reality remains unresolved |
 
@@ -664,25 +685,48 @@ The companion conformance file defines machine-readable skeletons for these mini
 | `GALC-014` | Component and correlation integrity pass; external truth cannot be independently established | Correlation MAY pass; grounding `insufficient_evidence` |
 | `GALC-015` | Sender reports a successful offer without counterparty acceptance | Custody `fail`; sender-side success MUST NOT become acceptance |
 | `GALC-016` | Evidence was accepted and later became unavailable | Custody `insufficient_evidence`; preserve prior acceptance and later loss |
-| `GALC-017` | Custody claims acceptance without a referenced result | Structural validation fails; custody MUST NOT pass |
-| `GALC-018` | Two evaluations report the same property | Structural validation fails; overall result MUST NOT be `correlated` |
+| `GALC-017` | Custody claims acceptance without a referenced result | Input structural negative; no semantic oracle |
+| `GALC-018` | Two evaluations report the same property | Output-envelope structural negative; no semantic oracle |
+| `GALC-019` | Anchored claim lacks required references | Input structural negative; no semantic oracle |
+| `GALC-020` | Referenced anchoring result is inaccessible | Temporal anchoring `insufficient_evidence`; correlation evaluated separately |
+| `GALC-021` | Inclusion verifies; time remains operator-asserted | Temporal anchoring `insufficient_evidence`; correlation evaluated separately |
+| `GALC-022` | Referenced anchoring result demonstrably fails integrity | Temporal anchoring `fail`; correlation evaluated separately |
 
 ### 16.1 Scenario construction and verifier-output boundary
 
-The companion file remains candidate scenario material rather than cryptographic known-answer evidence. Its `base_lifecycle` is a structural fixture envelope: the stored `evaluations` and `overall_result` exist only to exercise full-envelope schema constraints. They are fixture placeholders, are not scenario inputs, and MUST NOT be represented as results produced for a materialized vector.
+The companion file contains 22 ordered candidate scenario skeletons, not cryptographic known-answer evidence. `base_lifecycle` is a structural fixture envelope: its `evaluations` and `overall_result` are placeholders used only for full-envelope schema tests, never results produced for a materialized vector. `base_verification_context` separately declares synthetic resolver/test-double inputs for upstream anchoring evidence; it is not executed verification and does not establish real-world anchoring.
 
 A conforming scenario materializer MUST:
 
-1. deep-copy `base_lifecycle` for each vector as a structural fixture envelope;
-2. apply `semantic_changes` in listed order using only `add`, `remove`, and `replace` operations with JSON Pointer path semantics;
-3. use the resulting fixture envelope only for the declared structural schema check, including output-schema negative controls such as `GALC-018`;
-4. project the scenario input by removing `evaluations` and `overall_result` from the changed fixture envelope;
-5. keep the projected scenario input and the vector's `expected` test oracle as separate artifacts;
-6. when `recompute_integrity` is `true`, recompute each affected record payload digest using its declared canonicalization and digest algorithm, update every dependent record reference and typed-link endpoint transitively, and regenerate or remove any integrity assertion invalidated by changed bytes;
-7. when `recompute_integrity` is `false`, preserve the deliberately inconsistent digest or link so the verifier can detect it; and
-8. require a semantic verifier to consume only the projected scenario input, independently compute `evaluations` and `overall_result` under the declared evaluation contract, and compare those produced outputs with `expected`.
+1. deep-copy the base lifecycle and verification context for each vector;
+2. apply `semantic_changes` in order using only `add`, `remove`, and `replace` with JSON Pointer semantics; changes MAY address either base object;
+3. check the changed full fixture envelope against the lifecycle schema, preserving structural negative controls including output-only mutations;
+4. project the lifecycle input by removing `evaluations` and `overall_result`;
+5. emit the fixture envelope, projected scenario input, verification context, and expected-output artifact separately;
+6. classify the case by `test_scope`: `semantic_scenario`, `structural_input_negative`, or `output_envelope_negative`;
+7. omit `semantic_verifier_output` for structural negative cases and explicitly mark semantic comparison `not_applicable`; their `expected` object contains only `schema_validation: fail`;
+8. for eligible semantic cases, pass only the projected input and explicitly declared verification context to a future verifier, which MUST produce new evaluations independently of the expected-output artifact; and
+9. compare independently produced outputs according to section 16.2 only after the semantic case's structural precondition succeeds.
 
-The structural harness MAY emit the projected scenario input and expected oracle, but MUST NOT emit inherited fixture outputs as verifier results. Supplied fixture digests and evaluation values remain synthetic placeholders and therefore do not establish cryptographic or semantic conformance. A materialized implementation run MUST emit newly computed digests and independently produced evaluation outputs, and identify the canonicalization, digest, verifier-method, property-set, and aggregation-rule versions it used.
+The emitted `<scenario>.fixture-envelope.json` is explicitly labelled as a structural fixture and is the target of the schema check. Its placeholder or deliberately invalid output fields MUST NOT be consumed as actual results. `<scenario>.scenario-input.json` contains no top-level verifier outputs. `<scenario>.verification-context.json` contains the synthetic evidence environment, and `<scenario>.expected-output.json` identifies scope, structural expectations, and semantic applicability. This preserves GALC-018's invalid evaluation set for inspection without assigning a contradictory oracle to its otherwise baseline input.
+
+A future driver MUST instantiate the declared resolver/test doubles and record their immutable revision with the run. Their supplied upstream check conditions are test inputs, not the produced GALC property matrix. In this fixture format, `resolution: inaccessible` makes the referenced result unavailable regardless of other retained fixture fields; `result_integrity: invalid` declares a demonstrably invalid upstream result; `time_basis: operator_asserted` supplies no independently authenticated time. A driver MUST NOT silently substitute live evidence or a different trust context. Production verifiers MUST perform or verify the actual upstream checks rather than trust these fixture declarations.
+
+When `recompute_integrity` is true, a future materializer performing an implementation run MUST recompute affected payload digests under their declared representations, update dependent record and link references transitively, and regenerate or remove invalidated integrity assertions. Changed objects require newly valid anchoring evidence; updating a reference does not renew an old anchor. When false, preserve deliberately inconsistent bindings for testing. This structural harness does not perform that cryptographic work. Supplied digests, result references, and upstream fixtures are synthetic.
+
+### 16.2 Partial-expectation comparison and consistency
+
+Comparison rule `safe-galc/0.1/partial-expectations/1` applies only to `semantic_scenario` cases. Before comparing an oracle, the produced evaluation set MUST satisfy the full output schema, the mandatory-property and uniqueness rules of section 10.1, and the applicability requirements. The aggregate MUST be independently derived under the declared rule in section 10.2, not copied from the oracle.
+
+- Every property named in `expected.evaluations` MUST exist in the produced set and match the specified status exactly.
+- Unspecified properties are not asserted by the partial oracle. They remain subject to the full evaluation contract; omission from an oracle is not permission to omit mandatory produced evaluations.
+- `expected.reason_codes` is a required subset of the union of `reason_codes` across the produced property evaluations. Order is immaterial and additional contract-permitted codes are allowed. This flat list does not assert which property carries a code; a test needing that distinction requires a future versioned expectation format.
+- If `expected.overall_result` is present, it MUST equal the independently aggregated produced result exactly.
+- Structural negative cases have no semantic expectation. Their invalid fixture is tested for structural rejection only; projection does not make them semantic test cases.
+
+The harness MUST reject incompatible partial expectations for identical projected inputs, verification contexts, and integrity-recomputation modes. It compares specified aggregate values and overlapping property statuses; compatible partial maps may coexist and required reason-code subsets may accumulate. Scenario IDs, titles, and expected outputs are not verifier inputs and MUST NOT be used to distinguish otherwise identical cases. The JSON serialization used for this local equality check is not a cryptographic canonicalization claim.
+
+These checks establish fixture scope and oracle consistency, not the truth of semantic expectations. No semantic verifier or cryptographic/runtime conformance is claimed by this harness.
 
 ## 17. Security and abuse considerations
 
